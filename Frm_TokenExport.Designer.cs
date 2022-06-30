@@ -1,6 +1,6 @@
 ﻿namespace RO_TOKEN
 {
-    partial class Form1
+    partial class Frm_TokenExport
     {
         /// <summary>
         /// Required designer variable.

@@ -13,13 +13,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
+using System.Threading;
 
 namespace RO_TOKEN
 {
-    public partial class Form1 : Form
+    public partial class Frm_TokenExport : Form
     {
         private String LDCONSOLE = String.Empty;
-        public Form1()
+        public Frm_TokenExport()
         {
             InitializeComponent();
             init();
@@ -44,7 +45,7 @@ namespace RO_TOKEN
         public bool Init_Ldconsole()
         {
 
-      
+
 
             if (File.Exists(Path.Join(txt_vms_folder.Text, "ls2console.exe")))
             {
@@ -70,8 +71,9 @@ namespace RO_TOKEN
             FolderBrowserDialog dilog = new FolderBrowserDialog();
 
             dilog.Description = "选择模拟器安装目录";
+            var result = dilog.ShowDialog();
 
-            if (dilog.ShowDialog() == DialogResult.OK || dilog.ShowDialog() == DialogResult.Yes)
+            if (result == DialogResult.OK || result == DialogResult.Yes)
             {
 
                 txt_vms_folder.Text = dilog.SelectedPath;
@@ -80,16 +82,12 @@ namespace RO_TOKEN
 
         private void btn_select_export_Click(object sender, EventArgs e)
         {
-            FolderBrowserDialog dilog = new FolderBrowserDialog();
-
+            FolderBrowserDialog dilog = new FolderBrowserDialog(); 
             dilog.Description = "选择导出目录";
-
-            if (dilog.ShowDialog() == DialogResult.OK || dilog.ShowDialog() == DialogResult.Yes)
-
-            {
-
-                txt_export_path.Text = dilog.SelectedPath;
-
+            var result = dilog.ShowDialog();
+            if (result == DialogResult.OK || result == DialogResult.Yes) 
+            { 
+                txt_export_path.Text = dilog.SelectedPath; 
             }
         }
 
@@ -143,12 +141,12 @@ namespace RO_TOKEN
                 catch (Exception ex)
                 {
 
-                    txt_log.AppendText("\r\n" + "错误：" + exportFileName+" "+ex.Message);
-                } 
+                    txt_log.AppendText("\r\n" + "错误：" + exportFileName + " " + ex.Message);
+                }
             }
         }
 
- 
+
 
         public void ExportToken(String vmdkPath, String DestinationFile)
         {
@@ -158,13 +156,12 @@ namespace RO_TOKEN
             volMgr.AddDisk(disk);
             var volumes = volMgr.GetLogicalVolumes();
             var tokenVolume = volumes[1].PhysicalVolume;
-            using  var stream = tokenVolume.Partition.Open();
+            using var stream = tokenVolume.Partition.Open();
             using ExtFileSystem extFs = new ExtFileSystem(stream);
             bool isExist = extFs.FileExists(tokenFile);
             if (isExist)
             {
                 long fileLength = extFs.GetFileLength(tokenFile);
-
                 using Stream bootStream = extFs.OpenFile(tokenFile, FileMode.Open, FileAccess.Read);
 
                 byte[] file = new byte[bootStream.Length];
@@ -187,14 +184,11 @@ namespace RO_TOKEN
         }
 
 
-
-
-
-        public String adbPushToken(int index, String tokenPath)
+        public List<String> ExecCmd(String processPath, String arguments)
         {
             var psi = new ProcessStartInfo();
-            psi.FileName = LDCONSOLE;
-            psi.Arguments = $" adb --index {index} --command \"push {tokenPath} /data/data/com.xd.ro.roapk/shared_prefs/XDUserToken.xml\"";
+            psi.FileName = processPath;
+            psi.Arguments = arguments;
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;//不显示程序窗口
             psi.RedirectStandardOutput = true;
@@ -206,11 +200,36 @@ namespace RO_TOKEN
 #pragma warning restore CS8602 // 解引用可能出现空引用。
             using StreamReader reader = process.StandardOutput;
             string data = reader.ReadToEnd();
-        
-            using StreamReader errorReader    = process.StandardError;
+            using StreamReader errorReader = process.StandardError;
             String error = errorReader.ReadToEnd();
             String command = $"{LDCONSOLE} {psi.Arguments}";
-            String msg = $"{command}--> {data} {error}";
+            List<String> list = new List<string> { command, data, error };
+            return list;
+        }
+
+
+        public Dictionary<String, String[]> getRunning()
+        {
+
+            List<String> result = this.ExecCmd(LDCONSOLE, " list2"); 
+            if (!String.IsNullOrEmpty(result[2]))
+            {
+                txt_export_path.AppendText($" {result[0]}, {result[1]},{result[2]}");
+                return null;
+            }
+            List<String[]> list = result[1].Split("\r\n").Select(p => p.Split(",")).ToList();
+            Dictionary<String, String[]> devicesMap = new Dictionary<string, string[]>();
+            foreach (var item in list)
+            {
+                devicesMap.Add(item[0], item);
+            }
+            return devicesMap;
+        }
+
+        public String adbPushToken(String index, String tokenPath)
+        { 
+            var result=ExecCmd(LDCONSOLE, $" adb --index {index} --command \"push {tokenPath} /data/data/com.xd.ro.roapk/shared_prefs/XDUserToken.xml\""); 
+            String msg = $"{result[0]}--> {result[1]} {result[2]}";
             return msg;
         }
 
@@ -224,22 +243,71 @@ namespace RO_TOKEN
                 return;
             }
             HashSet<String> allVmdkFiles = getVmdkFiles();
+            List<String> allExist=new List<string>();
             for (int i = cb_start.SelectedIndex; i <= cb_end.SelectedIndex; i++)
-            {
+            { 
                 String vmdk = Path.Join(txt_vms_folder.Text, "vms", "leidian" + i, "data.vmdk");
                 if (!allVmdkFiles.Contains(vmdk))
                 {
                     txt_log.AppendText("\r\n失败：" + vmdk + "模拟器不存在");
                     continue;
                 }
+                allExist.Add(i+"");
+            }
+            if (allExist.Count==0)
+            {
+                MessageBox.Show("选择的范围内模拟器不存在！");
+                return;
+            }
+            while (true)
+            {
+                var currentItems=  getRunning();
+                int count = 0;
+                foreach (var item in allExist)
+                {
+                    if (!currentItems.ContainsKey(item))
+                    {
+                        continue;
+                    }
+                    //# 索引，标题，顶层窗口句柄，绑定窗口句柄，是否进入android，进程PID，VBox进程PID
+                    var currentMonitor = currentItems[item];
+                    if (currentMonitor[6] == "-1")
+                    {
+                        var execInfo=ExecCmd(LDCONSOLE, $" launch --index {currentMonitor[0]}");
+                        if (String.IsNullOrEmpty(execInfo[2]))
+                        {
+                            txt_log.AppendText($"启动{currentMonitor[0]}--{currentMonitor[1]}\r\n");
+                            Thread.Sleep(5000);
+                            continue;
+                        }
+                        else { 
+                            MessageBox.Show($"启动{currentMonitor[0]}--{currentMonitor[1]}失败"); 
+                        } 
+                    }
+                    if (currentMonitor[4] != "-1")
+                    {
+                        count++;
+                    }
+                }
+                if (count== allExist.Count)
+                {
+                    break;
+                }
+                Thread.Sleep(5000);
+            }
+
+      
+
+            foreach (var i in allExist)
+            {
+           
                 String exportFolder = Path.Join(txt_export_path.Text, "模拟器" + i);
                 String importFilename = Path.Join(exportFolder, "XDUserToken.xml");
                 if (!File.Exists(importFilename))
                 {
                     txt_log.AppendText("\r\n 失败：" + exportFolder + " 无效目录");
                     continue;
-                }
-
+                } 
                 String msg = adbPushToken(i, importFilename);
                 txt_log.AppendText("\r\n" + msg);
 
