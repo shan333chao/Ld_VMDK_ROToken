@@ -43,6 +43,7 @@
             this.txt_log = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
+            this.btn_kill_all = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btn_box_folder
@@ -185,11 +186,22 @@
             this.label6.TabIndex = 15;
             this.label6.Text = "说明\r\n1、开始/结束 为模拟器id\r\n2、导出时不需要开启模拟器\r\n3、导入时需要先开启模拟器，并等待进入android系统桌面";
             // 
+            // btn_kill_all
+            // 
+            this.btn_kill_all.Location = new System.Drawing.Point(259, 158);
+            this.btn_kill_all.Name = "btn_kill_all";
+            this.btn_kill_all.Size = new System.Drawing.Size(111, 23);
+            this.btn_kill_all.TabIndex = 16;
+            this.btn_kill_all.Text = "关闭所有模拟器";
+            this.btn_kill_all.UseVisualStyleBackColor = true;
+            this.btn_kill_all.Click += new System.EventHandler(this.btn_kill_all_Click);
+            // 
             // Frm_TokenExport
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(798, 611);
+            this.Controls.Add(this.btn_kill_all);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.txt_log);
@@ -229,5 +241,6 @@
         private System.Windows.Forms.TextBox txt_log;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Button btn_kill_all;
     }
 }

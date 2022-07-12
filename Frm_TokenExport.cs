@@ -121,23 +121,37 @@ namespace RO_TOKEN
 
         private async void btn_export_token_Click(object sender, EventArgs e)
         {
+
+
+
             if (!Directory.Exists(txt_export_path.Text))
             {
-                txt_log.AppendText("\r\n [导出目录]不存在");
+                txt_log.AppendText($"\r\n [导出目录:{txt_export_path.Text}] 不存在");
                 return;
             }
+
+
+
             bool init_ld = Init_Ldconsole();
 
             if (!init_ld)
             {
                 return;
             }
+
+            if (MessageBox.Show("导出时需要关闭所有模拟器,是否确认关闭", "警告", MessageBoxButtons.OKCancel) == DialogResult.OK)
+            {
+                 await closeAllVMBOX();
+            }
+
             HashSet<String> allVmdkFiles = getVmdkFiles();
             for (int i = cb_start.SelectedIndex; i <= cb_end.SelectedIndex; i++)
             {
                 String vmdk = Path.Join(txt_vms_folder.Text, "vms", "leidian" + i, "data.vmdk");
                 if (!allVmdkFiles.Contains(vmdk))
                 {
+                    txt_log.AppendText($"\r\n\r\n {vmdk} 不存在 \r\n\r\n");
+
                     continue;
                 }
 
@@ -186,7 +200,7 @@ namespace RO_TOKEN
                 int totalRead = 0;
                 while (totalRead < file.Length)
                 {
-                    totalRead +=await bootStream.ReadAsync(file, totalRead, file.Length - totalRead); 
+                    totalRead += await bootStream.ReadAsync(file, totalRead, file.Length - totalRead);
                 }
                 using FileStream fileStream = File.Create(DestinationFile, (int)bootStream.Length);
                 await bootStream.CopyToAsync(fileStream);
@@ -195,7 +209,7 @@ namespace RO_TOKEN
             }
             else
             {
-                txt_log.AppendText($"\r\n [!] File {vmdkPath} can not be found");
+                txt_log.AppendText($"\r\n  {vmdkPath}  未安装或未登陆过RO");
             }
 
         }
@@ -228,10 +242,10 @@ namespace RO_TOKEN
         {
 
             List<String> result = await this.ExecCmd("taskkill", "/f /im  adb.exe");
-            txt_log.AppendText($" {result[0]}, {result[1]},{result[2]}");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
             await Task.Delay(2000);
             result = await this.ExecCmd(ADBAPP, "devices");
-            txt_log.AppendText($" {result[0]}, {result[1]},{result[2]}");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
 
         }
 
@@ -246,10 +260,15 @@ namespace RO_TOKEN
                 txt_export_path.AppendText($" {result[0]}, {result[1]},{result[2]}");
                 return devicesMap;
             }
-            List<String[]> list = result[1].Split("\r\n").Select(p => p.Split(",")).ToList(); 
+            List<String[]> list = result[1].Split("\r\n").Select(p => p.Split(",")).ToList();
             foreach (var item in list)
             {
-                devicesMap.Add(item[0], item);
+                if (!String.IsNullOrEmpty(item[0]))
+                {
+                    devicesMap.Add(item[0], item);
+                }
+
+
             }
             return devicesMap;
         }
@@ -267,7 +286,7 @@ namespace RO_TOKEN
         {
 
 
- 
+
             bool init_ld = Init_Ldconsole();
 
             if (!init_ld)
@@ -309,7 +328,7 @@ namespace RO_TOKEN
                         var execInfo = await ExecCmd(LDCONSOLE, $" launch --index {currentMonitor[0]}");
                         if (String.IsNullOrEmpty(execInfo[2]))
                         {
-                            txt_log.AppendText($"启动{currentMonitor[0]}--{currentMonitor[1]}\r\n");
+                            txt_log.AppendText($"\r\n 启动{currentMonitor[0]}--{currentMonitor[1]}\r\n");
                             await Task.Delay(5000);
                             continue;
                         }
@@ -356,5 +375,65 @@ namespace RO_TOKEN
             }
         }
 
+
+
+
+        public async Task closeAllVMBOX()
+        {
+            var runningItems = await getRunning();
+            var allRunning = runningItems.Values.Where(p => p[6] != "-1").Select(p => p[1]).ToList();
+            if (allRunning != null && allRunning.Count > 0)
+            {
+
+                txt_log.AppendText($"\r\n 关闭  {String.Join(" , ", allRunning)}");
+                var result = await ExecCmd(LDCONSOLE, "quitall");
+                txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                for (int i = 10; i > 0; i--)
+                {
+                    txt_log.AppendText($"\r\n等待模拟器关闭 剩余{i}秒");
+                    await Task.Delay(1000);
+                }
+                runningItems = await getRunning();
+                allRunning = runningItems.Values.Where(p => p[6] != "-1").Select(p => p[1]).ToList();
+                if (allRunning != null && allRunning.Count > 0)
+                {
+                    txt_log.AppendText($"\r\n n结束进程强行关闭  {String.Join(" , ", allRunning)}");
+                    result = await this.ExecCmd("taskkill", " /f /im LsBoxHeadless.exe");
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                    result = await this.ExecCmd("taskkill", " /f /im LsBoxSVC.exe");
+
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                    result = await this.ExecCmd("taskkill", " /f /im lsplayer.exe");
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                    result = await this.ExecCmd("taskkill", " /f /im LdVBoxHeadless.exe");
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                    result = await this.ExecCmd("taskkill", " /f /im LdVBoxSVC.exe");
+
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+                    result = await this.ExecCmd("taskkill", " /f /im dnplayer.exe");
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+
+
+                    result = await this.ExecCmd("taskkill", " /f /im adb.exe");
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+
+                }
+         
+            }
+            txt_log.AppendText("\r\n 所有模拟器已关闭");  
+        }
+
+        private async void btn_kill_all_Click(object sender, EventArgs e)
+        {
+            bool init_ld = Init_Ldconsole();
+
+            if (!init_ld)
+            {
+                return;
+            }
+            await closeAllVMBOX();
+
+
+        }
     }
 }
