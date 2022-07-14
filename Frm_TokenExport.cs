@@ -141,7 +141,7 @@ namespace RO_TOKEN
 
             if (MessageBox.Show("导出时需要关闭所有模拟器,是否确认关闭", "警告", MessageBoxButtons.OKCancel) == DialogResult.OK)
             {
-                 await closeAllVMBOX();
+                await closeAllVMBOX();
             }
 
             HashSet<String> allVmdkFiles = getVmdkFiles();
@@ -220,6 +220,7 @@ namespace RO_TOKEN
             var psi = new ProcessStartInfo();
             psi.FileName = processPath;
             psi.Arguments = arguments;
+          
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;//不显示程序窗口
             psi.RedirectStandardOutput = true;
@@ -243,9 +244,7 @@ namespace RO_TOKEN
 
             List<String> result = await this.ExecCmd("taskkill", "/f /im  adb.exe");
             txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-            await Task.Delay(2000);
-            result = await this.ExecCmd(ADBAPP, "devices");
-            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+     
 
         }
 
@@ -311,10 +310,11 @@ namespace RO_TOKEN
                 txt_log.AppendText("\r\n选择的范围内模拟器不存在！");
                 return;
             }
+
             while (true)
-            {
-                var currentItems = await getRunning();
+            {         
                 int count = 0;
+                var currentItems = await getRunning(); 
                 foreach (var item in allExist)
                 {
                     if (!currentItems.ContainsKey(item))
@@ -334,11 +334,12 @@ namespace RO_TOKEN
                         }
                         else
                         {
-                            txt_log.AppendText($"\r\n启动{currentMonitor[0]}--{currentMonitor[1]}失败");
+                            txt_log.AppendText($"\r\n 启动{currentMonitor[0]}--{currentMonitor[1]}失败");
                         }
                     }
-                    if (currentMonitor[4] != "-1")
+                    if (currentMonitor[4] == "1")
                     {
+
                         count++;
                     }
                 }
@@ -346,18 +347,11 @@ namespace RO_TOKEN
                 {
                     break;
                 }
-                await Task.Delay(5000);
+                await Task.Delay(10000);
             }
 
-            await killAllAdbs();
 
 
-            for (int i = 30; i > 0; i--)
-            {
-                txt_log.AppendText($"\r\n 等待{i}秒");
-                await Task.Delay(1000);
-
-            }
 
             foreach (var i in allExist)
             {
@@ -411,16 +405,11 @@ namespace RO_TOKEN
 
                     txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
                     result = await this.ExecCmd("taskkill", " /f /im dnplayer.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-
-
-                    result = await this.ExecCmd("taskkill", " /f /im adb.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-
+                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}"); 
                 }
-         
+
             }
-            txt_log.AppendText("\r\n 所有模拟器已关闭");  
+            txt_log.AppendText("\r\n 所有模拟器已关闭");
         }
 
         private async void btn_kill_all_Click(object sender, EventArgs e)
@@ -434,6 +423,32 @@ namespace RO_TOKEN
             await closeAllVMBOX();
 
 
+        }
+
+        private async void btn_restart_adb_Click(object sender, EventArgs e)
+        {
+            bool init_ld = Init_Ldconsole();
+
+            if (!init_ld)
+            {
+                return;
+            }
+            await killAllAdbs();
+        }
+
+        private  void btn_open_adb_Click(object sender, EventArgs e)
+        {
+            bool init_ld = Init_Ldconsole();
+
+            if (!init_ld)
+            {
+                return;
+            }
+            txt_log.AppendText("\r\n 正在 检查adb状态！");
+            Process.Start(ADBAPP, "devices");
+            //var  result = await this.ExecCmd(ADBAPP, "devices");
+            //txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            txt_log.AppendText("\r\n  adb状态检查完成！");
         }
     }
 }

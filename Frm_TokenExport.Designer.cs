@@ -44,6 +44,8 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.btn_kill_all = new System.Windows.Forms.Button();
+            this.btn_restart_adb = new System.Windows.Forms.Button();
+            this.btn_open_adb = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btn_box_folder
@@ -196,11 +198,33 @@
             this.btn_kill_all.UseVisualStyleBackColor = true;
             this.btn_kill_all.Click += new System.EventHandler(this.btn_kill_all_Click);
             // 
+            // btn_restart_adb
+            // 
+            this.btn_restart_adb.Location = new System.Drawing.Point(389, 158);
+            this.btn_restart_adb.Name = "btn_restart_adb";
+            this.btn_restart_adb.Size = new System.Drawing.Size(75, 23);
+            this.btn_restart_adb.TabIndex = 17;
+            this.btn_restart_adb.Text = "关闭adb";
+            this.btn_restart_adb.UseVisualStyleBackColor = true;
+            this.btn_restart_adb.Click += new System.EventHandler(this.btn_restart_adb_Click);
+            // 
+            // btn_open_adb
+            // 
+            this.btn_open_adb.Location = new System.Drawing.Point(489, 158);
+            this.btn_open_adb.Name = "btn_open_adb";
+            this.btn_open_adb.Size = new System.Drawing.Size(75, 23);
+            this.btn_open_adb.TabIndex = 18;
+            this.btn_open_adb.Text = "打开adb";
+            this.btn_open_adb.UseVisualStyleBackColor = true;
+            this.btn_open_adb.Click += new System.EventHandler(this.btn_open_adb_Click);
+            // 
             // Frm_TokenExport
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(798, 611);
+            this.Controls.Add(this.btn_open_adb);
+            this.Controls.Add(this.btn_restart_adb);
             this.Controls.Add(this.btn_kill_all);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label2);
@@ -242,5 +266,7 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Button btn_kill_all;
+        private System.Windows.Forms.Button btn_restart_adb;
+        private System.Windows.Forms.Button btn_open_adb;
     }
 }
