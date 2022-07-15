@@ -54,6 +54,7 @@ namespace RO_TOKEN
             {
                 LDCONSOLE = Path.Join(txt_vms_folder.Text, "ls2console.exe");
                 ADBAPP = Path.Join(txt_vms_folder.Text, "adb.exe");
+                txt_log.AppendText($"\r\n[模拟器目录]{LDCONSOLE}");
 
             }
             else if (File.Exists(Path.Join(txt_vms_folder.Text, "ldconsole.exe")))
@@ -61,6 +62,7 @@ namespace RO_TOKEN
 
                 LDCONSOLE = Path.Join(txt_vms_folder.Text, "ldconsole.exe");
                 ADBAPP = Path.Join(txt_vms_folder.Text, "adb.exe");
+                txt_log.AppendText($"\r\n[模拟器目录]{LDCONSOLE}");
             }
             else
             {
@@ -136,6 +138,7 @@ namespace RO_TOKEN
 
             if (!init_ld)
             {
+                txt_log.AppendText($"\r\n 初始化目录模拟器");
                 return;
             }
 
@@ -220,7 +223,7 @@ namespace RO_TOKEN
             var psi = new ProcessStartInfo();
             psi.FileName = processPath;
             psi.Arguments = arguments;
-          
+
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;//不显示程序窗口
             psi.RedirectStandardOutput = true;
@@ -244,7 +247,7 @@ namespace RO_TOKEN
 
             List<String> result = await this.ExecCmd("taskkill", "/f /im  adb.exe");
             txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-     
+
 
         }
 
@@ -290,6 +293,7 @@ namespace RO_TOKEN
 
             if (!init_ld)
             {
+                txt_log.AppendText($"\r\n 初始化模拟器失败");
                 return;
             }
 
@@ -311,44 +315,9 @@ namespace RO_TOKEN
                 return;
             }
 
-            while (true)
-            {         
-                int count = 0;
-                var currentItems = await getRunning(); 
-                foreach (var item in allExist)
-                {
-                    if (!currentItems.ContainsKey(item))
-                    {
-                        continue;
-                    }
-                    //# 索引，标题，顶层窗口句柄，绑定窗口句柄，是否进入android，进程PID，VBox进程PID
-                    var currentMonitor = currentItems[item];
-                    if (currentMonitor[6] == "-1")
-                    {
-                        var execInfo = await ExecCmd(LDCONSOLE, $" launch --index {currentMonitor[0]}");
-                        if (String.IsNullOrEmpty(execInfo[2]))
-                        {
-                            txt_log.AppendText($"\r\n 启动{currentMonitor[0]}--{currentMonitor[1]}\r\n");
-                            await Task.Delay(5000);
-                            continue;
-                        }
-                        else
-                        {
-                            txt_log.AppendText($"\r\n 启动{currentMonitor[0]}--{currentMonitor[1]}失败");
-                        }
-                    }
-                    if (currentMonitor[4] == "1")
-                    {
 
-                        count++;
-                    }
-                }
-                if (count == allExist.Count)
-                {
-                    break;
-                }
-                await Task.Delay(10000);
-            }
+
+            //            var execInfo = await ExecCmd(LDCONSOLE, $" launch --index {currentMonitor[0]}");
 
 
 
@@ -363,10 +332,12 @@ namespace RO_TOKEN
                     txt_log.AppendText("\r\n 失败：" + exportFolder + " 无效目录");
                     continue;
                 }
+
                 String msg = await adbPushToken(i, importFilename);
                 txt_log.AppendText("\r\n" + msg);
 
             }
+            txt_log.AppendText("\r\n" + "导入完成");
         }
 
 
@@ -374,42 +345,35 @@ namespace RO_TOKEN
 
         public async Task closeAllVMBOX()
         {
-            var runningItems = await getRunning();
-            var allRunning = runningItems.Values.Where(p => p[6] != "-1").Select(p => p[1]).ToList();
-            if (allRunning != null && allRunning.Count > 0)
+
+
+            Process.Start(LDCONSOLE, "quitall");
+
+            for (int i = 10; i > 0; i--)
             {
-
-                txt_log.AppendText($"\r\n 关闭  {String.Join(" , ", allRunning)}");
-                var result = await ExecCmd(LDCONSOLE, "quitall");
-                txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                for (int i = 10; i > 0; i--)
-                {
-                    txt_log.AppendText($"\r\n等待模拟器关闭 剩余{i}秒");
-                    await Task.Delay(1000);
-                }
-                runningItems = await getRunning();
-                allRunning = runningItems.Values.Where(p => p[6] != "-1").Select(p => p[1]).ToList();
-                if (allRunning != null && allRunning.Count > 0)
-                {
-                    txt_log.AppendText($"\r\n n结束进程强行关闭  {String.Join(" , ", allRunning)}");
-                    result = await this.ExecCmd("taskkill", " /f /im LsBoxHeadless.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                    result = await this.ExecCmd("taskkill", " /f /im LsBoxSVC.exe");
-
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                    result = await this.ExecCmd("taskkill", " /f /im lsplayer.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                    result = await this.ExecCmd("taskkill", " /f /im LdVBoxHeadless.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                    result = await this.ExecCmd("taskkill", " /f /im LdVBoxSVC.exe");
-
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
-                    result = await this.ExecCmd("taskkill", " /f /im dnplayer.exe");
-                    txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}"); 
-                }
-
+                txt_log.AppendText($"\r\n等待模拟器关闭 剩余{i}秒");
+                await Task.Delay(1000);
             }
-            txt_log.AppendText("\r\n 所有模拟器已关闭");
+
+            var result = await this.ExecCmd("taskkill", " /f /im LsBoxHeadless.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+
+            result = await this.ExecCmd("taskkill", " /f /im LsBoxSVC.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im lsplayer.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im LdVBoxHeadless.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im LdVBoxSVC.exe");
+
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im dnplayer.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im ldconsole.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+            result = await this.ExecCmd("taskkill", " /f /im lsconsole.exe");
+            txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
+
         }
 
         private async void btn_kill_all_Click(object sender, EventArgs e)
@@ -436,7 +400,7 @@ namespace RO_TOKEN
             await killAllAdbs();
         }
 
-        private  void btn_open_adb_Click(object sender, EventArgs e)
+        private void btn_open_adb_Click(object sender, EventArgs e)
         {
             bool init_ld = Init_Ldconsole();
 
@@ -449,6 +413,79 @@ namespace RO_TOKEN
             //var  result = await this.ExecCmd(ADBAPP, "devices");
             //txt_log.AppendText($"\r\n {result[0]}, {result[1]},{result[2]}");
             txt_log.AppendText("\r\n  adb状态检查完成！");
+        }
+
+        private async void btn_start_monitor_Click(object sender, EventArgs e)
+        {
+            bool init_ld = Init_Ldconsole();
+
+            if (!init_ld)
+            {
+                txt_log.AppendText($"\r\n 初始化模拟器失败");
+                return;
+            }
+            HashSet<String> allVmdkFiles = getVmdkFiles();
+            List<String> allExist = new List<string>();
+            for (int i = cb_start.SelectedIndex; i <= cb_end.SelectedIndex; i++)
+            {
+                String vmdk = Path.Join(txt_vms_folder.Text, "vms", "leidian" + i, "data.vmdk");
+                if (!allVmdkFiles.Contains(vmdk))
+                {
+                    txt_log.AppendText("\r\n失败：" + vmdk + "模拟器不存在");
+                    continue;
+                }
+                allExist.Add(i + "");
+            }
+            if (allExist.Count == 0)
+            {
+                txt_log.AppendText("\r\n选择的范围内模拟器不存在！");
+                return;
+            }
+            //this.button_disable(true);
+
+            foreach (var i in allExist)
+            {
+
+                String exportFolder = Path.Join(txt_export_path.Text, "模拟器" + i);
+                String importFilename = Path.Join(exportFolder, "XDUserToken.xml");
+                if (!File.Exists(importFilename))
+                {
+                    txt_log.AppendText("\r\n 失败：" + exportFolder + " 无效目录");
+                    continue;
+                }
+                Process.Start(LDCONSOLE, $" launch --index {i}"); ;
+                txt_log.AppendText($"\r\n启动模拟器{i}");
+                await Task.Delay(8000);
+            }
+            await Task.Delay(10000);
+
+            txt_log.AppendText($"\r\n启动模拟器完毕");
+            //this.button_disable(false);
+        }
+
+        private void btn_next_batch_Click(object sender, EventArgs e)
+        {
+            int end = cb_end.SelectedIndex - cb_start.SelectedIndex;
+            cb_start.SelectedIndex = cb_end.SelectedIndex + 1;
+            cb_end.SelectedIndex = cb_start.SelectedIndex + end;
+        }
+
+        HashSet<String> excludeBtn = new HashSet<string>() { "btn_restart_adb", "btn_open_adb" };
+
+        public void button_disable(bool isEnable)
+        {
+
+            foreach (var item in this.Controls)
+            {
+                if (item is Button)
+                {
+                    Button btn = item as Button;
+                    if (!excludeBtn.Contains(btn.Name))
+                    {
+                        btn.Enabled = isEnable;
+                    }
+                }
+            }
         }
     }
 }
